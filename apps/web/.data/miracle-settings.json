@@ -1,0 +1,48 @@
+{
+  "businessProfile": {
+    "businessName": "Miracle Creative Studio",
+    "senderName": "Zohaib",
+    "businessEmail": "zohaibaidesigner@gmail.com",
+    "website": "https://www.behance.net/zohaibahamd",
+    "servicesOffered": "Graphic Design, Brand Identity & High-Converting Video Editing",
+    "emailSignature": "Best regards,\nZohaib\nMiracle Creative Studio",
+    "timezone": "America/New_York"
+  },
+  "emailAccount": {
+    "provider": "GMAIL",
+    "email": "zohaibaidesigner@gmail.com",
+    "dailyLimit": 50,
+    "hasAppPassword": true
+  },
+  "calendar": {
+    "bookingUrl": "https://calendar.google.com/calendar/u/0/appointments/schedules",
+    "enableGoogleMeet": true,
+    "callDurationMinutes": 15,
+    "selectedCalendarId": "primary",
+    "selectedCalendarName": "Primary Google Calendar",
+    "accountEmail": "zohaibaidesigner@gmail.com"
+  },
+  "behance": {
+    "profileUrl": "https://www.behance.net/zohaibahamd",
+    "primary_behance_profile_url": "https://www.behance.net/zohaibahamd",
+    "is_locked": true,
+    "status": "LOCKED",
+    "featuredProjects": [],
+    "last_sync_timestamp": "2026-11-08T13:43:00.771Z"
+  },
+  "gemini": {
+    "apiKey": "",
+    "model": "gemini-2.5-flash"
+  },
+  "automation": {
+    "followUpDelay1": 3,
+    "followUpDelay2": 6,
+    "stopOnReply": true,
+    "stopOnMeeting": true,
+    "dncList": [
+      "badfit@domain.com",
+      "competitor.com"
+    ]
+  },
+  "updatedAt": "2026-11-08T13:43:00.779Z"
+}

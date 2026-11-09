@@ -1,0 +1,123 @@
+[
+  {
+    "id": "serv-logo-design",
+    "name": "Logo Design",
+    "description": "Custom minimalist or luxury vector brand logo with full commercial usage rights.",
+    "category": "Design",
+    "minPrice": 5,
+    "maxPrice": 100,
+    "currency": "USD",
+    "includedDeliverables": [
+      "Vector SVG",
+      "Transparent PNG (Light & Dark)",
+      "High-Res JPG (300 DPI)",
+      "Favicon"
+    ],
+    "includedRevisions": 2,
+    "additionalRevisionPrice": 10,
+    "turnaroundDays": 3,
+    "rushDeliveryDays": 1,
+    "rushDeliveryFee": 20,
+    "advancePaymentPercentage": 50,
+    "allowedDiscountPercentage": 10,
+    "commercialLicensing": "Full commercial & worldwide trademark rights transferred upon final payment.",
+    "addOns": [
+      {
+        "id": "addon-brand-guidelines",
+        "name": "Mini Brand Style Guide (Color Palette & Typography)",
+        "price": 25
+      },
+      {
+        "id": "addon-social-kit",
+        "name": "Social Media Avatar & Banner Kit",
+        "price": 20
+      },
+      {
+        "id": "addon-source-files",
+        "name": "Original Source Vector Project Files (AI / EPS)",
+        "price": 15
+      }
+    ],
+    "customInstructions": "Prioritize clean aesthetic simplicity. Explain deliverable formats clearly.",
+    "isActive": true,
+    "createdAt": "2026-11-08T12:42:00.165Z",
+    "updatedAt": "2026-11-08T12:42:00.165Z"
+  },
+  {
+    "id": "serv-brand-identity",
+    "name": "Brand Identity System",
+    "description": "Complete visual identity system including typography, color hierarchies, business stationery, and brand manual.",
+    "category": "Branding",
+    "minPrice": 50,
+    "maxPrice": 350,
+    "currency": "USD",
+    "includedDeliverables": [
+      "Primary & Secondary Logos",
+      "Brand Style Guide Book",
+      "Stationery Mockups",
+      "Color Palette Rules",
+      "Typography Rules"
+    ],
+    "includedRevisions": 3,
+    "additionalRevisionPrice": 20,
+    "turnaroundDays": 5,
+    "rushDeliveryDays": 2,
+    "rushDeliveryFee": 45,
+    "advancePaymentPercentage": 50,
+    "allowedDiscountPercentage": 15,
+    "commercialLicensing": "Full commercial brand ownership transferred.",
+    "addOns": [
+      {
+        "id": "addon-pitch-deck",
+        "name": "Investor Pitch Deck Template (10 Slides)",
+        "price": 65
+      },
+      {
+        "id": "addon-packaging-mockup",
+        "name": "3D Product Packaging Mockup",
+        "price": 40
+      }
+    ],
+    "isActive": true,
+    "createdAt": "2026-11-08T12:42:00.165Z",
+    "updatedAt": "2026-11-08T12:42:00.165Z"
+  },
+  {
+    "id": "serv-video-editing",
+    "name": "High-Converting Video Editing & Showreels",
+    "description": "Dynamic short-form Reels/TikToks or long-form YouTube editing with viral pacing, motion graphics, and sound design.",
+    "category": "Video",
+    "minPrice": 20,
+    "maxPrice": 200,
+    "currency": "USD",
+    "includedDeliverables": [
+      "4K Rendered Video (9:16 or 16:9)",
+      "Color Grading",
+      "Sound FX & Audio Balancing",
+      "Dynamic Kinetic Captions"
+    ],
+    "includedRevisions": 2,
+    "additionalRevisionPrice": 15,
+    "turnaroundDays": 2,
+    "rushDeliveryDays": 1,
+    "rushDeliveryFee": 25,
+    "advancePaymentPercentage": 50,
+    "allowedDiscountPercentage": 10,
+    "commercialLicensing": "Broadcast & social monetization rights included.",
+    "addOns": [
+      {
+        "id": "addon-hook-variations",
+        "name": "3 Alternative Hook Variations (A/B Testing)",
+        "price": 20
+      },
+      {
+        "id": "addon-custom-thumbnail",
+        "name": "High-CTR YouTube / Instagram Thumbnail",
+        "price": 15
+      }
+    ],
+    "isActive": true,
+    "createdAt": "2026-11-08T12:42:00.165Z",
+    "updatedAt": "2026-11-08T12:42:00.165Z"
+  }
+]
