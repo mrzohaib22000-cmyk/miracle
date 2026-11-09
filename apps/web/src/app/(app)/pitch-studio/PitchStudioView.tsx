@@ -342,14 +342,15 @@ export function PitchStudioView() {
         // Refresh leads list
         const leadsRes = await fetch("/api/leads");
         const leadsData = await leadsRes.json();
-        if (leadsData.ok && Array.isArray(leadsData.leads)) {
-          setLeads(leadsData.leads);
-          if (leadsData.leads.length > 0) {
-            // Prefer first eligible lead or first in list
-            const firstEligible = leadsData.leads.find((l: any) => l.emailStatus === "VERIFIED") || leadsData.leads[0];
-            setSelectedLead(firstEligible);
-            loadEmailForLead(firstEligible);
-          }
+        const effectiveLeads = (leadsData.ok && Array.isArray(leadsData.leads) && leadsData.leads.length > 0)
+          ? leadsData.leads
+          : (Array.isArray(data.leads) ? data.leads : []);
+
+        if (effectiveLeads.length > 0) {
+          setLeads(effectiveLeads);
+          const firstEligible = effectiveLeads.find((l: any) => l.emailStatus === "VERIFIED") || effectiveLeads[0];
+          setSelectedLead(firstEligible);
+          loadEmailForLead(firstEligible);
         }
       }
     } catch (err: any) {

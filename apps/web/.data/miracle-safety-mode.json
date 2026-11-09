@@ -1,8 +1,8 @@
 {
-  "operatingMode": "LIVE_PAUSED",
-  "outreachPaused": true,
-  "emergencyStopActivatedAt": "2026-11-09T16:25:19.917Z",
-  "emergencyStopReason": "Manual emergency stop from UI",
+  "operatingMode": "TESTING",
+  "outreachPaused": false,
+  "emergencyStopActivatedAt": null,
+  "emergencyStopReason": null,
   "deploymentFlagEnabled": false,
   "testApprovedEmails": [
     "zohaibaidesigner@gmail.com"

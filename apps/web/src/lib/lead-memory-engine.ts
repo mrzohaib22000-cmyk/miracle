@@ -200,6 +200,10 @@ export class LeadMemoryEngine {
       updatedLead = {
         ...existing,
         ...leadData,
+        isInBin: leadData.isInBin ?? false,
+        isArchived: leadData.isArchived ?? false,
+        status: leadData.status || (existing.status === "BIN" ? "NEW" : existing.status) || "NEW",
+        crmStatus: leadData.crmStatus || (existing.crmStatus === "BIN" ? "NEW" : existing.crmStatus) || "NEW",
         companyName: rawCompany || existing.companyName,
         normalizedCompany: normCompany || existing.normalizedCompany,
         contactEmail: normEmail || existing.contactEmail,

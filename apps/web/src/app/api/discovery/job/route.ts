@@ -79,13 +79,8 @@ export async function POST(req: NextRequest) {
       const candidates = discoveryResult.candidates;
       let locationRejectedCount = discoveryResult.locationRejectedCount;
 
-      const existingLeads = LeadMemoryEngine.getLeads();
-      const existingEmails = new Set(
-        existingLeads.map((l) => (l.contactEmail || l.email || "").toLowerCase().trim()).filter(Boolean)
-      );
-      const existingCompanies = new Set(
-        existingLeads.map((l) => (l.companyName || l.businessName || "").toLowerCase().trim()).filter(Boolean)
-      );
+      const currentBatchEmails = new Set<string>();
+      const currentBatchCompanies = new Set<string>();
 
       const newlyAddedLeads: any[] = [];
       let readyCount = 0;
@@ -100,13 +95,14 @@ export async function POST(req: NextRequest) {
           break; // Exact target reached!
         }
 
-        scannedCount++;
         const rawEmail = (candidate.contactEmail || "").toLowerCase().trim();
         const compName = candidate.businessName.trim();
 
-        // Check if already in CRM
-        const isDuplicateCompany = existingCompanies.has(compName.toLowerCase());
-        const isDuplicateEmail = rawEmail ? existingEmails.has(rawEmail) : false;
+        // Avoid duplicates within the same discovery batch
+        if (rawEmail && currentBatchEmails.has(rawEmail)) continue;
+        if (currentBatchCompanies.has(compName.toLowerCase())) continue;
+
+        scannedCount++;
 
         let emailStatus: any = "NO_EMAIL_FOUND";
         let verificationStatus: any = "NO_EMAIL_FOUND";
@@ -127,12 +123,6 @@ export async function POST(req: NextRequest) {
           verificationStatus = "SUPPRESSED";
           outreachStatus = "Contact Suppressed - Prohibited";
           invalidCount++;
-        } else if (isDuplicateEmail) {
-          // Duplicate contact
-          emailStatus = "DUPLICATE";
-          verificationStatus = "DUPLICATE";
-          outreachStatus = "Duplicate Contact - Already in CRM";
-          invalidCount++;
         } else {
           // Genuine DNS & MX Deliverability Pre-Check
           const check = await verifyDomain(rawEmail);
@@ -145,7 +135,7 @@ export async function POST(req: NextRequest) {
             outreachStatus = "Ready to Send";
             isEligible = true;
             readyCount++;
-            existingEmails.add(rawEmail);
+            currentBatchEmails.add(rawEmail);
           } else if (check.status === "NULL_MX") {
             emailStatus = "NULL_MX";
             verificationStatus = "NULL_MX";
@@ -164,7 +154,7 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        existingCompanies.add(compName.toLowerCase());
+        currentBatchCompanies.add(compName.toLowerCase());
 
         // Calculate Deterministic Qualification Score
         const qualification = calculateQualificationScore({
@@ -202,6 +192,8 @@ export async function POST(req: NextRequest) {
           scoreBreakdown: qualification.breakdown,
           status: "NEW",
           crmStatus: "NEW",
+          isInBin: false,
+          isArchived: false,
           stage: isEligible ? "QUALIFIED" : "DISCOVERED",
           researchSummary: `Verified physical operation in ${candidate.city || chosenCity}, ${candidate.country || chosenCountry}. ${candidate.auditFindings}`,
           auditFindings: candidate.auditFindings,
