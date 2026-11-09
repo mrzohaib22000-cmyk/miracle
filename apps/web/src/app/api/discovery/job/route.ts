@@ -3,20 +3,22 @@ import { LeadMemoryEngine } from "@/lib/lead-memory-engine";
 import { BehanceVault } from "@/lib/behance-vault";
 import { verifyDomain } from "@/lib/dns-validator";
 import { discoverAuthenticBusinesses } from "@/lib/authentic-discovery";
+import { calculateQualificationScore } from "@/lib/qualification-scoring";
 
 // In-memory state for background discovery jobs
 let currentJob = {
   id: "job-idle",
   status: "idle", // "idle" | "running" | "paused" | "completed" | "search_limit_reached" | "stopped"
-  requestedValidLeads: 4,
+  requestedValidLeads: 5,
   readyContacts: 0,
   needResearch: 0,
   invalidOrSuppressed: 0,
+  locationRejected: 0,
   businessesScanned: 0,
   contactQualityRate: 0,
   currentNiche: "Gyms & Fitness Centers",
-  currentCity: "Chicago",
-  currentCountry: "United States",
+  currentCity: "Riyadh",
+  currentCountry: "Saudi Arabia",
   discoveryMode: "verified_only", // "verified_only" | "all_businesses"
   startedAt: null as string | null,
   completedAt: null as string | null,
@@ -35,10 +37,10 @@ export async function POST(req: NextRequest) {
     const { action, country, city, niche, targetCount, leadCount, discoveryMode } = body;
 
     if (action === "start") {
-      const countParam = targetCount ?? leadCount ?? 4;
-      const target = Math.max(1, Math.min(250, Number(countParam) || 4));
-      const chosenCountry = country || "United States";
-      const chosenCity = city || "Chicago";
+      const countParam = targetCount ?? leadCount ?? 5;
+      const target = Math.max(1, Math.min(250, Number(countParam) || 5));
+      const chosenCountry = country || "Saudi Arabia";
+      const chosenCity = city || "Riyadh";
       const chosenNiche = niche || "Gyms & Fitness Centers";
       const mode = discoveryMode === "all_businesses" ? "all_businesses" : "verified_only";
 
@@ -49,6 +51,7 @@ export async function POST(req: NextRequest) {
         readyContacts: 0,
         needResearch: 0,
         invalidOrSuppressed: 0,
+        locationRejected: 0,
         businessesScanned: 0,
         contactQualityRate: 0,
         currentCountry: chosenCountry,
@@ -58,20 +61,23 @@ export async function POST(req: NextRequest) {
         startedAt: new Date().toISOString(),
         completedAt: null,
         completionReason: null,
-        statusMessage: `Finding ${target} verified business contacts in ${chosenCity}...`,
+        statusMessage: `Finding ${target} location-verified business contacts in ${chosenCity}, ${chosenCountry}...`,
         error: null,
       };
 
       // 1. Authoritative Portfolio URL
       const portfolioUrl = BehanceVault.getPrimaryProfileUrl() || "";
 
-      // 2. Fetch Authentic Business Candidates
-      const candidates = await discoverAuthenticBusinesses({
+      // 2. Fetch Authentic Location-Verified Business Candidates
+      const discoveryResult = await discoverAuthenticBusinesses({
         niche: chosenNiche,
         city: chosenCity,
         country: chosenCountry,
-        maxToScan: 50,
+        maxToScan: Math.max(target * 2, 20),
       });
+
+      const candidates = discoveryResult.candidates;
+      let locationRejectedCount = discoveryResult.locationRejectedCount;
 
       const existingLeads = LeadMemoryEngine.getLeads();
       const existingEmails = new Set(
@@ -87,7 +93,7 @@ export async function POST(req: NextRequest) {
       let invalidCount = 0;
       let scannedCount = 0;
 
-      // 3. Replacement Discovery Loop
+      // 3. Lead Verification Loop
       // User requested `target` valid leads -> Loop until target is met or candidates are exhausted!
       for (const candidate of candidates) {
         if (readyCount >= target) {
@@ -107,6 +113,7 @@ export async function POST(req: NextRequest) {
         let outreachStatus = "Email Missing - Needs Research";
         let isEligible = false;
         let dnsDetails = "";
+        let hasVerifiedMx = false;
 
         if (!rawEmail) {
           // NO GUESSED EMAILS: Keep business in CRM with NO_EMAIL_FOUND
@@ -130,8 +137,9 @@ export async function POST(req: NextRequest) {
           // Genuine DNS & MX Deliverability Pre-Check
           const check = await verifyDomain(rawEmail);
           dnsDetails = check.details || check.error || "";
+          hasVerifiedMx = check.valid && Boolean(check.hasMx);
 
-          if (check.valid && check.hasMx) {
+          if (hasVerifiedMx) {
             emailStatus = "VERIFIED";
             verificationStatus = "VERIFIED";
             outreachStatus = "Ready to Send";
@@ -158,12 +166,25 @@ export async function POST(req: NextRequest) {
 
         existingCompanies.add(compName.toLowerCase());
 
+        // Calculate Deterministic Qualification Score
+        const qualification = calculateQualificationScore({
+          locationConfidence: candidate.locationConfidence || "HIGH",
+          locationMatched: true,
+          industryMatched: true,
+          hasNicheSpecialization: true,
+          emailStatus,
+          hasVerifiedMx,
+          hasAuditFindings: Boolean(candidate.auditFindings),
+          hasHttpsWebsite: candidate.website.startsWith("https://"),
+          hasDirectPhone: Boolean(candidate.phone),
+        });
+
         const leadId = `lead-${Date.now()}-${scannedCount}`;
         const newLeadRecord = LeadMemoryEngine.upsertLead({
           id: leadId,
           companyName: compName,
           businessName: compName,
-          contactName: candidate.contactName || "Executive Team",
+          contactName: candidate.contactName || "Management Team",
           contactEmail: rawEmail || "",
           email: rawEmail || "",
           emailStatus,
@@ -171,14 +192,18 @@ export async function POST(req: NextRequest) {
           outreachStatus,
           industry: chosenNiche,
           niche: chosenNiche,
-          city: chosenCity,
-          country: chosenCountry,
+          city: candidate.city || chosenCity,
+          country: candidate.country || chosenCountry,
+          address: candidate.address || "",
+          phone: candidate.phone || "",
           website: candidate.website,
-          leadScore: isEligible ? Math.floor(Math.random() * 8) + 90 : Math.floor(Math.random() * 10) + 75,
+          leadScore: qualification.totalScore,
+          leadGrade: qualification.grade,
+          scoreBreakdown: qualification.breakdown,
           status: "NEW",
           crmStatus: "NEW",
           stage: isEligible ? "QUALIFIED" : "DISCOVERED",
-          researchSummary: `Established brand presence in ${chosenCity}. ${candidate.auditFindings}`,
+          researchSummary: `Verified physical operation in ${candidate.city || chosenCity}, ${candidate.country || chosenCountry}. ${candidate.auditFindings}`,
           auditFindings: candidate.auditFindings,
           recommendedService: candidate.recommendedService,
           matchedBehanceTitle: "Behance Creative Portfolio",
@@ -190,7 +215,6 @@ export async function POST(req: NextRequest) {
           dnsCheckEvidence: dnsDetails,
         });
 
-        // In verified-only mode, only return eligible leads or present both
         newlyAddedLeads.push(newLeadRecord);
       }
 
@@ -200,14 +224,15 @@ export async function POST(req: NextRequest) {
       currentJob.readyContacts = readyCount;
       currentJob.needResearch = needResearchCount;
       currentJob.invalidOrSuppressed = invalidCount;
+      currentJob.locationRejected = locationRejectedCount;
       currentJob.businessesScanned = scannedCount;
       currentJob.contactQualityRate = qualityRate;
       currentJob.completedAt = new Date().toISOString();
       currentJob.status = targetReached ? "completed" : "search_limit_reached";
       currentJob.completionReason = targetReached ? "TARGET_REACHED" : "SEARCH_LIMIT_REACHED";
       currentJob.statusMessage = targetReached
-        ? `${readyCount} / ${target} Valid Contacts Found`
-        : `${readyCount} / ${target} Valid Contacts Found — Search Limit Reached`;
+        ? `${readyCount} / ${target} Verified Contacts Found — Ready for Outreach`
+        : `${readyCount} / ${target} Verified Contacts Found — Search Limit Reached`;
 
       return NextResponse.json({
         ok: true,

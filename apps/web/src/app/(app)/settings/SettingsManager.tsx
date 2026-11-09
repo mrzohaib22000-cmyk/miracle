@@ -40,6 +40,7 @@ type SettingsTab =
   | "calendar"
   | "behance"
   | "ai"
+  | "scrapegraph"
   | "services"
   | "agent"
   | "automation"
@@ -142,6 +143,15 @@ export function SettingsManager() {
     archivedLeads: 0,
   });
 
+  // 9. ScrapeGraphAI Lead Discovery Source
+  const [scrapeGraphApiKey, setScrapeGraphApiKey] = useState("");
+  const [scrapeGraphEnabled, setScrapeGraphEnabled] = useState(false);
+  const [scrapeGraphMaxCredits, setScrapeGraphMaxCredits] = useState(10);
+  const [scrapeGraphCreditsRemaining, setScrapeGraphCreditsRemaining] = useState<number | null>(null);
+  const [scrapeGraphStatus, setScrapeGraphStatus] = useState("NOT_CONFIGURED");
+  const [scrapeGraphNotice, setScrapeGraphNotice] = useState<string | null>(null);
+  const [isTestingScrapeGraph, setIsTestingScrapeGraph] = useState(false);
+
   // Load persistent settings on mount
   useEffect(() => {
     fetch("/api/settings")
@@ -179,6 +189,27 @@ export function SettingsManager() {
             setGeminiApiKey(s.gemini.apiKey || "");
             setGeminiModel(s.gemini.model || "gemini-2.5-flash");
           }
+          if (s.scrapegraph) {
+            setScrapeGraphApiKey(s.scrapegraph.apiKey || "");
+            setScrapeGraphEnabled(Boolean(s.scrapegraph.enabled));
+            setScrapeGraphMaxCredits(s.scrapegraph.maxCreditsPerSearch || 10);
+            setScrapeGraphCreditsRemaining(s.scrapegraph.creditsRemaining ?? null);
+            setScrapeGraphStatus(s.scrapegraph.status || "NOT_CONFIGURED");
+          }
+        }
+      })
+      .catch(() => undefined);
+
+    // Query live ScrapeGraphAI config
+    fetch("/api/integrations/scrapegraph")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.ok && d.config) {
+          if (d.config.apiKey) setScrapeGraphApiKey(d.config.apiKey);
+          setScrapeGraphEnabled(Boolean(d.config.enabled));
+          setScrapeGraphMaxCredits(d.config.maxCreditsPerSearch || 10);
+          setScrapeGraphCreditsRemaining(d.config.creditsRemaining ?? null);
+          setScrapeGraphStatus(d.config.status || "NOT_CONFIGURED");
         }
       })
       .catch(() => undefined);
@@ -331,6 +362,13 @@ export function SettingsManager() {
         apiKey: geminiApiKey,
         model: geminiModel,
       },
+      scrapegraph: {
+        apiKey: scrapeGraphApiKey,
+        enabled: scrapeGraphEnabled,
+        maxCreditsPerSearch: scrapeGraphMaxCredits,
+        creditsRemaining: scrapeGraphCreditsRemaining,
+        status: scrapeGraphStatus,
+      },
       automation: {
         followUpDelay1,
         followUpDelay2,
@@ -400,6 +438,32 @@ export function SettingsManager() {
     } finally {
       setTestingGemini(false);
       setTimeout(() => setGeminiStatus(null), 5000);
+    }
+  };
+
+  const handleTestScrapeGraph = async () => {
+    setIsTestingScrapeGraph(true);
+    setScrapeGraphNotice(null);
+    try {
+      const res = await fetch("/api/integrations/scrapegraph", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "test", apiKey: scrapeGraphApiKey }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setScrapeGraphStatus("CONNECTED");
+        setScrapeGraphCreditsRemaining(data.credits ?? null);
+        setScrapeGraphNotice(`✓ Connected successfully! Credits remaining: ${data.credits ?? "Available"}`);
+      } else {
+        setScrapeGraphStatus("ERROR");
+        setScrapeGraphNotice(`Connection failed: ${data.error || "Invalid API key"}`);
+      }
+    } catch (e: any) {
+      setScrapeGraphStatus("ERROR");
+      setScrapeGraphNotice(`Error: ${e.message}`);
+    } finally {
+      setIsTestingScrapeGraph(false);
     }
   };
 
@@ -619,6 +683,7 @@ export function SettingsManager() {
     { id: "calendar", label: "Google Calendar", icon: Calendar },
     { id: "behance", label: "Behance Vault", icon: FolderHeart },
     { id: "ai", label: "AI Models & Gateways", icon: Sparkles },
+    { id: "scrapegraph", label: "Lead Sources (ScrapeGraphAI)", icon: Cpu },
     { id: "services", label: "Services & Pricing", icon: Briefcase },
     { id: "agent", label: "AI Client Agent", icon: Bot },
     { id: "automation", label: "Automation", icon: Clock },
@@ -1409,6 +1474,148 @@ export function SettingsManager() {
               {geminiStatus && (
                 <span className="text-xs text-[#10B981] font-mono">{geminiStatus}</span>
               )}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ======================================================== */}
+      {/* 7.5 TAB: SCRAPEGRAPHAI LEAD DISCOVERY PROVIDER          */}
+      {/* ======================================================== */}
+      {activeTab === "scrapegraph" && (
+        <section className="rounded-[10px] border border-[#202020] bg-[#121212] p-5 space-y-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#1E1E1E] pb-3">
+            <div>
+              <h2 className="text-sm font-semibold text-white flex items-center gap-2">
+                <Cpu className="size-4 text-[#10B981]" />
+                ScrapeGraphAI Search &amp; Web Discovery
+              </h2>
+              <p className="text-xs text-[#888888] mt-0.5">
+                AI-powered live web search and structured company extraction when local directories are exhausted.
+              </p>
+            </div>
+
+            <span
+              className={`px-2.5 py-1 rounded-full text-[11px] font-mono font-semibold border ${
+                scrapeGraphStatus === "CONNECTED"
+                  ? "bg-[#10B981]/15 text-[#10B981] border-[#10B981]/30"
+                  : scrapeGraphStatus === "CONFIGURED"
+                  ? "bg-[#38BDF8]/15 text-[#38BDF8] border-[#38BDF8]/30"
+                  : scrapeGraphStatus === "ERROR"
+                  ? "bg-[#EF4444]/15 text-[#EF4444] border-[#EF4444]/30"
+                  : "bg-[#71717A]/15 text-[#A1A1AA] border-[#71717A]/30"
+              }`}
+            >
+              ● {scrapeGraphStatus}
+            </span>
+          </div>
+
+          {scrapeGraphNotice && (
+            <div
+              className={`p-3 rounded-[8px] border text-xs flex items-center justify-between ${
+                scrapeGraphNotice.startsWith("✓")
+                  ? "bg-[#10B981]/10 border-[#10B981]/25 text-[#10B981]"
+                  : "bg-[#EF4444]/10 border-[#EF4444]/25 text-[#EF4444]"
+              }`}
+            >
+              <span>{scrapeGraphNotice}</span>
+              <button
+                type="button"
+                onClick={() => setScrapeGraphNotice(null)}
+                className="text-[#888888] hover:text-white"
+              >
+                <X className="size-3.5" />
+              </button>
+            </div>
+          )}
+
+          {/* Configuration Form */}
+          <div className="rounded-[8px] bg-[#161616] border border-[#222222] p-4 space-y-4">
+            {/* API Key */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-[#CCCCCC] flex items-center justify-between">
+                <span>ScrapeGraphAI API Key</span>
+                <a
+                  href="https://dashboard.scrapegraphai.com"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-[11px] text-[#10B981] hover:underline inline-flex items-center gap-1 font-mono"
+                >
+                  <span>Get API Key</span>
+                  <ExternalLink className="size-3" />
+                </a>
+              </label>
+              <PasswordInput
+                value={scrapeGraphApiKey}
+                onChange={(e) => setScrapeGraphApiKey(e.target.value)}
+                placeholder="sgai-..."
+                className="w-full bg-[#181818] border-[#2A2A2A] text-white text-xs font-mono"
+              />
+              <p className="text-[11px] text-[#71717A]">
+                Requires a valid ScrapeGraphAI account. Enables real-time web discovery across Riyadh and global cities.
+              </p>
+            </div>
+
+            {/* Enable Provider Toggle */}
+            <div className="flex items-center justify-between pt-2 border-t border-[#222222]">
+              <div>
+                <span className="text-xs font-medium text-white block">Enable Live Web Discovery</span>
+                <p className="text-[11px] text-[#71717A]">
+                  Automatically search and extract candidate businesses online when directory leads are exhausted.
+                </p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={scrapeGraphEnabled}
+                  onChange={(e) => setScrapeGraphEnabled(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-[#27272A] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#10B981]"></div>
+              </label>
+            </div>
+
+            {/* Max Credits per Search */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-[#222222]">
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-[#CCCCCC]">Max Credits per Discovery Run</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="50"
+                  value={scrapeGraphMaxCredits}
+                  onChange={(e) => setScrapeGraphMaxCredits(Number(e.target.value) || 10)}
+                  className="w-full rounded-[6px] bg-[#181818] border border-[#2A2A2A] px-3 py-1.5 text-xs text-white"
+                />
+                <span className="text-[10px] text-[#71717A]">Protects against accidental quota overconsumption.</span>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-[#CCCCCC]">ScrapeGraph Account Balance</label>
+                <div className="p-2 rounded-[6px] bg-[#181818] border border-[#2A2A2A] text-xs font-mono text-[#38BDF8] flex items-center justify-between">
+                  <span>Remaining Credits:</span>
+                  <span className="font-bold text-white">
+                    {scrapeGraphCreditsRemaining !== null ? scrapeGraphCreditsRemaining : "Not checked yet"}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Test Connection Button */}
+            <div className="pt-3 border-t border-[#222222] flex items-center gap-3">
+              <button
+                type="button"
+                onClick={handleTestScrapeGraph}
+                disabled={isTestingScrapeGraph || !scrapeGraphApiKey}
+                className="rounded-[6px] bg-[#1E1E1E] border border-[#2E2E2E] px-3.5 py-1.5 text-xs font-medium text-white hover:bg-[#2A2A2A] inline-flex items-center gap-1.5 transition disabled:opacity-50"
+              >
+                {isTestingScrapeGraph ? (
+                  <RefreshCw className="size-3 animate-spin text-[#10B981]" />
+                ) : (
+                  <Sparkles className="size-3 text-[#10B981]" />
+                )}
+                <span>{isTestingScrapeGraph ? "Verifying API..." : "Test Connection & Check Credits"}</span>
+              </button>
             </div>
           </div>
         </section>

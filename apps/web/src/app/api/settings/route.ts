@@ -73,6 +73,15 @@ export const DEFAULT_SETTINGS = {
     requireManualApproval: true,
     doNotContactList: ["badfit@domain.com", "competitor.com"],
   },
+  scrapegraph: {
+    apiKey: process.env.SCRAPEGRAPH_API_KEY || "",
+    enabled: false,
+    maxCreditsPerSearch: 10,
+    creditsRemaining: null as number | null,
+    status: process.env.SCRAPEGRAPH_API_KEY ? "CONFIGURED" : "NOT_CONFIGURED",
+    lastTestedAt: null as string | null,
+    lastError: null as string | null,
+  },
 };
 
 export async function GET() {

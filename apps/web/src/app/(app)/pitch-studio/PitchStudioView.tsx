@@ -72,10 +72,11 @@ export function PitchStudioView() {
   const [discoveryMode, setDiscoveryMode] = useState<"verified_only" | "all_businesses">("verified_only");
   const [jobStatus, setJobStatus] = useState<"idle" | "running" | "paused" | "completed" | "search_limit_reached" | "stopped">("idle");
   const [jobProgress, setJobProgress] = useState({
-    requestedValidLeads: 4,
+    requestedValidLeads: 5,
     readyContacts: 0,
     needResearch: 0,
     invalidOrSuppressed: 0,
+    locationRejected: 0,
     businessesScanned: 0,
     contactQualityRate: 0,
     statusMessage: "",
@@ -202,12 +203,13 @@ export function PitchStudioView() {
         if (d.ok && d.job) {
           setJobStatus(d.job.status);
           setJobProgress({
-            requestedValidLeads: d.job.metrics?.requestedValidLeads || d.job.targetCount || 0,
-            readyContacts: d.job.metrics?.readyContacts || d.job.qualifiedCount || 0,
-            needResearch: d.job.metrics?.needResearch || 0,
-            invalidOrSuppressed: d.job.metrics?.invalidOrSuppressed || 0,
-            businessesScanned: d.job.metrics?.businessesScanned || d.job.foundCount || 0,
-            contactQualityRate: d.job.metrics?.contactQualityRate || 100,
+            requestedValidLeads: d.job.requestedValidLeads || d.job.metrics?.requestedValidLeads || d.job.targetCount || 0,
+            readyContacts: d.job.readyContacts ?? d.job.metrics?.readyContacts ?? d.job.qualifiedCount ?? 0,
+            needResearch: d.job.needResearch ?? d.job.metrics?.needResearch ?? 0,
+            invalidOrSuppressed: d.job.invalidOrSuppressed ?? d.job.metrics?.invalidOrSuppressed ?? 0,
+            locationRejected: d.job.locationRejected ?? 0,
+            businessesScanned: d.job.businessesScanned ?? d.job.metrics?.businessesScanned ?? d.job.foundCount ?? 0,
+            contactQualityRate: d.job.contactQualityRate ?? d.job.metrics?.contactQualityRate ?? 100,
             statusMessage: d.job.statusMessage || "",
           });
         }
@@ -330,6 +332,7 @@ export function PitchStudioView() {
           readyContacts: data.job.readyContacts || 0,
           needResearch: data.job.needResearch || 0,
           invalidOrSuppressed: data.job.invalidOrSuppressed || 0,
+          locationRejected: data.job.locationRejected || 0,
           businessesScanned: data.job.businessesScanned || 0,
           contactQualityRate: data.job.contactQualityRate || 0,
           statusMessage: data.job.statusMessage || "",
@@ -827,14 +830,18 @@ export function PitchStudioView() {
               </span>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-1.5 border-t border-[#222222] text-[11px]">
+            <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 pt-1.5 border-t border-[#222222] text-[11px]">
               <div>
                 <span className="text-[#71717A] block text-[10px]">Ready Contacts</span>
-                <strong className="text-[#10B981] font-mono">{jobProgress.readyContacts}</strong>
+                <strong className="text-[#10B981] font-mono">{jobProgress.readyContacts} / {jobProgress.requestedValidLeads}</strong>
               </div>
               <div>
                 <span className="text-[#71717A] block text-[10px]">Need Research</span>
                 <strong className="text-[#F59E0B] font-mono">{jobProgress.needResearch}</strong>
+              </div>
+              <div>
+                <span className="text-[#71717A] block text-[10px]">Location Rejected</span>
+                <strong className="text-[#A1A1AA] font-mono">{jobProgress.locationRejected}</strong>
               </div>
               <div>
                 <span className="text-[#71717A] block text-[10px]">Invalid / Suppressed</span>
@@ -845,7 +852,7 @@ export function PitchStudioView() {
                 <strong className="text-white font-mono">{jobProgress.businessesScanned}</strong>
               </div>
               <div>
-                <span className="text-[#71717A] block text-[10px]">Quality Rate</span>
+                <span className="text-[#71717A] block text-[10px]">Deliverability Rate</span>
                 <strong className="text-[#38BDF8] font-mono">{jobProgress.contactQualityRate}%</strong>
               </div>
             </div>
